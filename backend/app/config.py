@@ -2,6 +2,12 @@ import os
 from pydantic_settings import BaseSettings
 
 
+def _parse_origins(raw: str | None, default: list[str]) -> list[str]:
+    if not raw:
+        return default
+    return [origin.strip() for origin in raw.split(",") if origin.strip()]
+
+
 class Settings(BaseSettings):
     """
     Central app configuration. Reads from environment variables / .env file.
@@ -15,7 +21,12 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 60 * 24 * 7  # 7 days
     upload_dir: str = os.getenv("UPLOAD_DIR", "uploads")
     max_upload_size_mb: int = 10
-    cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
+    # Comma-separated list of allowed frontend origins, e.g.
+    # CORS_ORIGINS=https://taskflow.vercel.app,https://taskflow-git-main.vercel.app
+    cors_origins: list[str] = _parse_origins(
+        os.getenv("CORS_ORIGINS"),
+        ["http://localhost:5173", "http://127.0.0.1:5173"],
+    )
 
     class Config:
         env_file = ".env"
