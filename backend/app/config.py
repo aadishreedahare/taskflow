@@ -1,11 +1,6 @@
 import os
+from pydantic import field_validator
 from pydantic_settings import BaseSettings
-
-
-def _parse_origins(raw: str | None, default: list[str]) -> list[str]:
-    if not raw:
-        return default
-    return [origin.strip() for origin in raw.split(",") if origin.strip()]
 
 
 class Settings(BaseSettings):
@@ -23,10 +18,16 @@ class Settings(BaseSettings):
     max_upload_size_mb: int = 10
     # Comma-separated list of allowed frontend origins, e.g.
     # CORS_ORIGINS=https://taskflow.vercel.app,https://taskflow-git-main.vercel.app
-    cors_origins: list[str] = _parse_origins(
-        os.getenv("CORS_ORIGINS"),
-        ["http://localhost:5173", "http://127.0.0.1:5173"],
-    )
+    cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
+
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def _split_cors_origins(cls, v):
+        # pydantic-settings normally expects a JSON array for list-typed env
+        # vars; this lets CORS_ORIGINS be a plain comma-separated string instead.
+        if isinstance(v, str):
+            return [origin.strip() for origin in v.split(",") if origin.strip()]
+        return v
 
     class Config:
         env_file = ".env"
